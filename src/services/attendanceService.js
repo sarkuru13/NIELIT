@@ -49,14 +49,25 @@ export async function createAttendance(attendanceData) {
 
 export async function updateAttendance(attendanceId, attendanceData) {
   try {
+    // **FIX:** Extract the student's ID string from the object before validation and updating.
+    const studentId = typeof attendanceData.Student_Id === 'object' && attendanceData.Student_Id !== null
+        ? attendanceData.Student_Id.$id
+        : attendanceData.Student_Id;
+
+    if (!studentId) {
+        throw new Error('Invalid Student ID provided for update.');
+    }
+
     // Validate Student_Id exists
-    await getStudent(attendanceData.Student_Id); // Throws if student doesn't exist
+    await getStudent(studentId);
+
     const response = await databases.updateDocument(
       DATABASE_ID,
       ATTENDANCE_COLLECTION_ID,
       attendanceId,
       {
-        Student_Id: attendanceData.Student_Id,
+        // Pass only the string ID for the relationship
+        Student_Id: studentId,
         Status: attendanceData.Status,
         Course_Id: attendanceData.Course_Id,
         Marked_By: attendanceData.Marked_By,
@@ -67,6 +78,7 @@ export async function updateAttendance(attendanceId, attendanceData) {
     );
     return response;
   } catch (error) {
+    // The original error from Appwrite is now more descriptive
     throw new Error('Failed to update attendance: ' + error.message);
   }
 }
